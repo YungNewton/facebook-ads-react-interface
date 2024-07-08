@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import CampaignForm from './CampaignForm';
 import ConfigForm from './ConfigForm';
-// import ProgressBar from './ProgressBar';
+import ProgressBar from './ProgressBar';  // Ensure ProgressBar is imported
 import SuccessScreen from './SuccessScreen';
 
 const socket = io('http://localhost:5000/');
