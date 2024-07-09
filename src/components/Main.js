@@ -2,16 +2,22 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import CampaignForm from './CampaignForm';
 import ConfigForm from './ConfigForm';
-import ProgressBar from './ProgressBar';  // Ensure ProgressBar is imported
+import ProgressBar from './ProgressBar'; // Ensure ProgressBar is imported
 import SuccessScreen from './SuccessScreen';
 
 const socket = io('http://localhost:5000/');
 
 const Main = () => {
   const [formId, setFormId] = useState('mainForm');
+  const [previousForm, setPreviousForm] = useState('mainForm');
   const [progress, setProgress] = useState(0);
   const [step, setStep] = useState('');
-  const [config, setConfig] = useState({});
+  const [config, setConfig] = useState({
+    facebook_page_id: '102076431877514',
+    headline: 'No More Neuropathic Foot Pain',
+    link: 'https://kyronaclinic.com/pages/review-1',
+    utm_parameters: '?utm_source=Facebook&utm_medium={{adset.name}}&utm_campaign={{campaign.name}}&utm_content={{ad.name}}',
+  });
   const [taskId, setTaskId] = useState(null);
   const [uploadController, setUploadController] = useState(null);
 
@@ -54,16 +60,22 @@ const Main = () => {
   }, [taskId]);
 
   const handleShowForm = (formId) => {
+    setPreviousForm(formId === 'configForm' ? previousForm : formId);
     setFormId(formId);
   };
 
   const handleEditConfig = () => {
+    setPreviousForm(formId);
     setFormId('configForm');
   };
 
-  const handleSaveConfig = (config) => {
-    setConfig(config);
-    setFormId('mainForm');
+  const handleSaveConfig = (newConfig) => {
+    setConfig(newConfig);
+    setFormId(previousForm);
+  };
+
+  const handleCancelConfig = () => {
+    setFormId(previousForm);
   };
 
   const handleCancel = () => {
@@ -155,7 +167,7 @@ const Main = () => {
         />
       )}
       {formId === 'configForm' && (
-        <ConfigForm onSaveConfig={handleSaveConfig} onCancel={() => handleShowForm('mainForm')} />
+        <ConfigForm initialConfig={config} onSaveConfig={handleSaveConfig} onCancel={handleCancelConfig} />
       )}
       {formId === 'progress' && (
         <div className="progress-container">
