@@ -8,6 +8,13 @@ const CampaignForm = ({ formId, onSubmit, onEditConfig, onGoBack }) => {
   const handleSubmit = (event) => {
     event.preventDefault();
     const formData = new FormData(event.target);
+
+    if (formId === 'newCampaign') {
+      formData.append('campaign_name', campaignName);
+    } else {
+      formData.append('campaign_id', campaignId);
+    }
+
     onSubmit(formData);
   };
 

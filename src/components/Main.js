@@ -133,10 +133,10 @@ const Main = () => {
     <div className="container">
       <h1>Facebook Ads Campaign Manager</h1>
       {formId === 'mainForm' && (
-        <>
+        <div className="form-container">
           <button className="option-button" onClick={() => handleShowForm('newCampaignForm')}>Create New Campaign</button>
           <button className="option-button" onClick={() => handleShowForm('existingCampaignForm')}>Use Existing Campaign</button>
-        </>
+        </div>
       )}
       {formId === 'newCampaignForm' && (
         <CampaignForm
