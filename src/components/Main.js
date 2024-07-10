@@ -5,7 +5,7 @@ import ConfigForm from './ConfigForm';
 import ProgressBar from './ProgressBar'; // Ensure ProgressBar is imported
 import SuccessScreen from './SuccessScreen';
 
-const socket = io('http://13.51.194.22:5000/');
+const socket = io('http://localhost:5000/');
 
 const Main = () => {
   const [formId, setFormId] = useState('mainForm');
@@ -22,6 +22,9 @@ const Main = () => {
   const [uploadController, setUploadController] = useState(null);
 
   useEffect(() => {
+    let progressData = null;
+    let logInterval = null;
+
     socket.on('connect', () => {
       console.log('WebSocket connected');
     });
@@ -32,6 +35,7 @@ const Main = () => {
 
     socket.on('progress', (data) => {
       if (data.task_id === taskId) {
+        progressData = data; // Store the latest progress data
         setProgress(data.progress);
         setStep(data.step);
       }
@@ -39,18 +43,28 @@ const Main = () => {
 
     socket.on('task_complete', (data) => {
       if (data.task_id === taskId) {
+        clearInterval(logInterval); // Clear the interval when the task is complete
         setFormId('successScreen');
       }
     });
 
     socket.on('error', (data) => {
       if (data.task_id === taskId) {
+        clearInterval(logInterval); // Clear the interval on error
         alert(`Error: ${data.message}`);
         setFormId('mainForm');
       }
     });
 
+    // Set up an interval to log the progress data every 0.5 seconds
+    logInterval = setInterval(() => {
+      if (progressData) {
+        console.log('Progress:', progressData.progress, 'Step:', progressData.step);
+      }
+    }, 500);
+
     return () => {
+      clearInterval(logInterval); // Clear the interval when the component unmounts
       socket.off('connect');
       socket.off('disconnect');
       socket.off('progress');
@@ -85,7 +99,7 @@ const Main = () => {
     }
 
     if (taskId) {
-      fetch('http://13.51.194.22:5000/cancel_task', {
+      fetch('http://localhost:5000/cancel_task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: taskId }),
@@ -117,7 +131,7 @@ const Main = () => {
     const controller = new AbortController();
     setUploadController(controller);
 
-    fetch('http://13.51.194.22:5000/create_campaign', {
+    fetch('http://localhost:5000/create_campaign', {
       method: 'POST',
       body: formData,
       signal: controller.signal,
