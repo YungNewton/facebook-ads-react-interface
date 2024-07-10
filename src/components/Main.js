@@ -5,7 +5,7 @@ import ConfigForm from './ConfigForm';
 import ProgressBar from './ProgressBar'; // Ensure ProgressBar is imported
 import SuccessScreen from './SuccessScreen';
 
-const socket = io('http://localhost:5000/');
+const socket = io('https://fb-ads-backend.onrender.com');
 
 const Main = () => {
   const [formId, setFormId] = useState('mainForm');
@@ -99,7 +99,7 @@ const Main = () => {
     }
 
     if (taskId) {
-      fetch('http://localhost:5000/cancel_task', {
+      fetch('https://fb-ads-backend.onrender.com/cancel_task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: taskId }),
@@ -131,7 +131,7 @@ const Main = () => {
     const controller = new AbortController();
     setUploadController(controller);
 
-    fetch('http://localhost:5000/create_campaign', {
+    fetch('https://fb-ads-backend.onrender.com/create_campaign', {
       method: 'POST',
       body: formData,
       signal: controller.signal,
