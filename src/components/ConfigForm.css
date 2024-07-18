@@ -1,0 +1,77 @@
+.form-container {
+    margin: 20px;
+  }
+
+.form-container input,
+.form-container textarea,
+.form-container select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+  
+  form fieldset {
+    margin-bottom: 20px;
+    padding: 20px;
+    border: 1px solid #ccc;
+  }
+  
+  form legend {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  form label {
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  form input,
+  form select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  button.save-config-button,
+  button.go-back-button {
+    padding: 10px 20px;
+    margin-right: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  button.save-config-button {
+    background-color: #4CAF50;
+    color: white;
+  }
+  
+  h2 {
+    text-align: center;
+    text-decoration: underline;
+    margin-bottom: 20px;
+  }
+  
+  h3 {
+    text-align: center;
+    text-decoration: underline;
+    margin-bottom: 20px;
+  }
+
+  .age-range-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  .age-range-separator {
+    margin: 0 10px;
+    font-size: 0.9em;
+  }
+  

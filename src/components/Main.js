@@ -2,21 +2,41 @@ import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import CampaignForm from './CampaignForm';
 import ConfigForm from './ConfigForm';
-import ProgressBar from './ProgressBar'; // Ensure ProgressBar is imported
+import ProgressBar from './ProgressBar';
 import SuccessScreen from './SuccessScreen';
 
-const socket = io('https://fb-ads-backend.onrender.com');
+const socket = io('http://localhost:5000/');
 
 const Main = () => {
   const [formId, setFormId] = useState('mainForm');
   const [previousForm, setPreviousForm] = useState('mainForm');
   const [progress, setProgress] = useState(0);
+  const [stepVisible, setStepVisible] = useState(false);
   const [step, setStep] = useState('');
   const [config, setConfig] = useState({
+    ad_account_id: 'act_2945173505586523',
+    pixel_id: '466400552489809',
     facebook_page_id: '102076431877514',
-    headline: 'No More Neuropathic Foot Pain',
-    link: 'https://kyronaclinic.com/pages/review-1',
-    utm_parameters: '?utm_source=Facebook&utm_medium={{adset.name}}&utm_campaign={{campaign.name}}&utm_content={{ad.name}}',
+    app_id: '314691374966102',
+    app_secret: '88d92443cfcfc3922cdea79b384a116e',
+    access_token: 'EAAEeNcueZAVYBO0NvEUMo378SikOh70zuWuWgimHhnE5Vk7ye8sZCaRtu9qQGWNDvlBZBBnZAT6HCuDlNc4OeOSsdSw5qmhhmtKvrWmDQ8ZCg7a1BZAM1NS69YmtBJWGlTwAmzUB6HuTmb3Vz2r6ig9Xz9ZADDDXauxFCry47Fgh51yS1JCeo295w2V',
+    objective: 'OUTCOME_SALES',
+    campaign_budget_optimization: 'DAILY_BUDGET',
+    budget_value: '50.73', // Default value in dollars
+    bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+    buying_type: 'AUCTION',
+    object_store_url: '',
+    location: 'GB',
+    age_range_min: '30',
+    age_range_max: '65',
+    gender: 'All',
+    app_events: getDefaultStartTime(),
+    ad_creative_primary_text: '',
+    ad_creative_headline: '',
+    ad_creative_description: '',
+    call_to_action: 'SHOP_NOW',
+    destination_url: '',
+    url_parameters: ''
   });
   const [taskId, setTaskId] = useState(null);
   const [uploadController, setUploadController] = useState(null);
@@ -35,28 +55,29 @@ const Main = () => {
 
     socket.on('progress', (data) => {
       if (data.task_id === taskId) {
-        progressData = data; // Store the latest progress data
+        progressData = data;
         setProgress(data.progress);
         setStep(data.step);
+        setStepVisible(true);
+        console.log('Received progress:', data);
       }
     });
 
     socket.on('task_complete', (data) => {
       if (data.task_id === taskId) {
-        clearInterval(logInterval); // Clear the interval when the task is complete
+        clearInterval(logInterval);
         setFormId('successScreen');
       }
     });
 
     socket.on('error', (data) => {
       if (data.task_id === taskId) {
-        clearInterval(logInterval); // Clear the interval on error
+        clearInterval(logInterval);
         alert(`Error: ${data.message}`);
         setFormId('mainForm');
       }
     });
 
-    // Set up an interval to log the progress data every 0.5 seconds
     logInterval = setInterval(() => {
       if (progressData) {
         console.log('Progress:', progressData.progress, 'Step:', progressData.step);
@@ -64,7 +85,7 @@ const Main = () => {
     }, 500);
 
     return () => {
-      clearInterval(logInterval); // Clear the interval when the component unmounts
+      clearInterval(logInterval);
       socket.off('connect');
       socket.off('disconnect');
       socket.off('progress');
@@ -99,7 +120,7 @@ const Main = () => {
     }
 
     if (taskId) {
-      fetch('https://fb-ads-backend.onrender.com/cancel_task', {
+      fetch('http://localhost:5000/cancel_task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task_id: taskId }),
@@ -121,17 +142,17 @@ const Main = () => {
     setTaskId(taskId);
     formData.append('task_id', taskId);
 
-    if (config.facebook_page_id) {
-      formData.append('facebook_page_id', config.facebook_page_id);
-      formData.append('headline', config.headline);
-      formData.append('link', config.link);
-      formData.append('utm_parameters', config.utm_parameters);
-    }
+    Object.keys(config).forEach((key) => {
+      formData.append(key, config[key]);
+    });
 
     const controller = new AbortController();
     setUploadController(controller);
 
-    fetch('https://fb-ads-backend.onrender.com/create_campaign', {
+    setProgress(0);
+    setStepVisible(false);
+
+    fetch('http://localhost:5000/create_campaign', {
       method: 'POST',
       body: formData,
       signal: controller.signal,
@@ -185,7 +206,7 @@ const Main = () => {
       )}
       {formId === 'progress' && (
         <div className="progress-container">
-          <ProgressBar progress={progress} step={step} />
+          <ProgressBar progress={progress} step={step} stepVisible={stepVisible} />
           <button className="cancel-button" onClick={handleCancel}>Cancel</button>
         </div>
       )}
@@ -194,6 +215,13 @@ const Main = () => {
       )}
     </div>
   );
+};
+
+const getDefaultStartTime = () => {
+  const startTime = new Date();
+  startTime.setUTCDate(startTime.getUTCDate() + 1);
+  startTime.setUTCHours(4, 0, 0, 0);
+  return startTime.toISOString().slice(0, 16); // Ensure it is in correct format for datetime-local input
 };
 
 export default Main;
