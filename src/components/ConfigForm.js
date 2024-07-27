@@ -10,7 +10,15 @@ const getDefaultStartTime = () => {
   return isoString.slice(0, 19); // Ensure it is in correct format for datetime-local input with seconds
 };
 
-const ConfigForm = ({ onSaveConfig, onCancel, initialConfig }) => {
+const getDefaultEndTime = () => {
+  const endTime = new Date();
+  endTime.setUTCDate(endTime.getUTCDate() + 2); // Default end time set to 2 days later
+  endTime.setUTCHours(4, 0, 0, 0);
+  const isoString = endTime.toISOString();
+  return isoString.slice(0, 19); // Ensure it is in correct format for datetime-local input with seconds
+};
+
+const ConfigForm = ({ onSaveConfig, onCancel, initialConfig, isNewCampaign }) => {
   const defaultPrimaryText = "Finding it difficult to deal with neuropathic foot pain, as well as stiff and painful joints?"
     + "\n\nNo matter whether your neuropathy is caused by diabetes, chemo-induced, autoimmune disease, or idiopathic conditions... "
     + "Tingling neuropathy has the potential to completely disrupt your life."
@@ -44,37 +52,92 @@ const ConfigForm = ({ onSaveConfig, onCancel, initialConfig }) => {
     link: defaultLink,
     url_parameters: defaultURLParameters,
     display_link: initialConfig.display_link || defaultLink,
-    destination_url: initialConfig.destination_url || defaultLink
-  });
+    destination_url: initialConfig.destination_url || defaultLink,
+    campaign_budget_optimization: isNewCampaign ? (initialConfig.campaign_budget_optimization || 'AD_SET_BUDGET_OPTIMIZATION') : 'AD_SET_BUDGET_OPTIMIZATION',
+    ad_set_budget_optimization: initialConfig.ad_set_budget_optimization || 'DAILY_BUDGET',
+    ad_set_budget_value: initialConfig.ad_set_budget_value || initialConfig.budget_value || '50.00',
+    ad_set_bid_strategy: initialConfig.ad_set_bid_strategy || 'LOWEST_COST_WITHOUT_CAP',
+    campaign_budget_value: initialConfig.campaign_budget_value || '50.73',
+    campaign_bid_strategy: initialConfig.campaign_bid_strategy || 'LOWEST_COST_WITHOUT_CAP',
+    bid_amount: initialConfig.bid_amount || '',
+    ad_format: initialConfig.ad_format || 'Single image or video',
+    ad_set_end_time: initialConfig.ad_set_end_time || getDefaultEndTime(), // New field for end time
+    prediction_id: initialConfig.prediction_id || '', // New field for prediction ID
+  });  
 
   const [showAppStoreUrl, setShowAppStoreUrl] = useState(initialConfig.objective === 'OUTCOME_APP_PROMOTION');
+  const [showBidAmount, setShowBidAmount] = useState(
+    ['COST_CAP', 'LOWEST_COST_WITH_BID_CAP'].includes(config.campaign_bid_strategy) ||
+    ['COST_CAP', 'LOWEST_COST_WITH_BID_CAP'].includes(config.ad_set_bid_strategy)
+  );
+  
+  const [showEndDate, setShowEndDate] = useState(
+    config.ad_set_budget_optimization === 'LIFETIME_BUDGET' || 
+    config.campaign_budget_optimization === 'LIFETIME_BUDGET'
+  );  
+
+  const [showPredictionId, setShowPredictionId] = useState(config.buying_type === 'RESERVED');
 
   useEffect(() => {
-    setConfig({
-      ...initialConfig,
-      app_events: initialConfig.app_events || getDefaultStartTime(),
-      ad_creative_primary_text: initialConfig.ad_creative_primary_text || defaultPrimaryText,
-      ad_creative_headline: initialConfig.ad_creative_headline || defaultHeadline,
-      ad_creative_description: initialConfig.ad_creative_description || defaultDescription,
-      call_to_action: initialConfig.call_to_action || defaultCallToAction,
-      link: initialConfig.link || defaultLink,
-      url_parameters: initialConfig.url_parameters || defaultURLParameters,
-      display_link: initialConfig.display_link || defaultLink,
-      destination_url: initialConfig.destination_url || initialConfig.display_link || defaultLink
-    });
-  }, [initialConfig, defaultPrimaryText]);
+    setConfig((prevConfig) => ({
+      ...prevConfig,
+      campaign_budget_optimization: isNewCampaign ? prevConfig.campaign_budget_optimization : 'AD_SET_BUDGET_OPTIMIZATION',
+    }));
+  }, [isNewCampaign]);
 
+  useEffect(() => {
+    console.log('Checking campaign and ad set budget optimization:', config.campaign_budget_optimization, config.ad_set_budget_optimization);
+    const shouldShowEndDate = (config.campaign_budget_optimization !== 'AD_SET_BUDGET_OPTIMIZATION' && config.campaign_budget_optimization === 'LIFETIME_BUDGET') ||
+                              (config.campaign_budget_optimization === 'AD_SET_BUDGET_OPTIMIZATION' && config.ad_set_budget_optimization === 'LIFETIME_BUDGET');
+    setShowBidAmount(
+      ['COST_CAP', 'LOWEST_COST_WITH_BID_CAP'].includes(config.campaign_bid_strategy) ||
+      ['COST_CAP', 'LOWEST_COST_WITH_BID_CAP'].includes(config.ad_set_bid_strategy)
+    );
+    setShowEndDate(shouldShowEndDate);
+    setShowPredictionId(config.buying_type === 'RESERVED');
+    console.log('Show end date:', shouldShowEndDate);
+  }, [config.campaign_bid_strategy, config.ad_set_bid_strategy, config.ad_set_budget_optimization, config.campaign_budget_optimization, config.buying_type]);
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setConfig({
-      ...config,
-      [name]: value,
+    console.log('Field changed:', name, 'New value:', value);
+    setConfig((prevConfig) => {
+      const newConfig = {
+        ...prevConfig,
+        [name]: value,
+      };
+  
+      // Automatically set campaign_budget_optimization to AD_SET_BUDGET_OPTIMIZATION if buying_type is RESERVED
+      if (name === 'buying_type' && value === 'RESERVED') {
+        newConfig.campaign_budget_optimization = 'AD_SET_BUDGET_OPTIMIZATION';
+        newConfig.ad_set_bid_strategy = ''; // Clear the ad set bid strategy
+      }
+  
+      if (name === 'campaign_budget_optimization' && value !== 'AD_SET_BUDGET_OPTIMIZATION') {
+        newConfig.buying_type = 'AUCTION';
+      }
+  
+      return newConfig;
     });
-
+  
     if (name === 'objective') {
       setShowAppStoreUrl(value === 'OUTCOME_APP_PROMOTION');
+      console.log('Show app store URL:', value === 'OUTCOME_APP_PROMOTION');
     }
-  };
+    if (name === 'ad_set_bid_strategy' || name === 'campaign_bid_strategy') {
+      setShowBidAmount(['COST_CAP', 'LOWEST_COST_WITH_BID_CAP'].includes(value));
+      console.log('Show bid amount:', ['COST_CAP', 'LOWEST_COST_WITH_BID_CAP'].includes(value));
+    }
+    if (name === 'ad_set_budget_optimization' || name === 'campaign_budget_optimization') {
+      const shouldShowEndDate = (name === 'campaign_budget_optimization' && value === 'LIFETIME_BUDGET') ||
+                                (name === 'ad_set_budget_optimization' && value === 'LIFETIME_BUDGET' && config.campaign_budget_optimization === 'AD_SET_BUDGET_OPTIMIZATION');
+      setShowEndDate(shouldShowEndDate);
+      console.log('Show end date:', shouldShowEndDate);
+    }
+    if (name === 'buying_type') {
+      setShowPredictionId(value === 'RESERVED');
+    }
+  };  
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -142,82 +205,173 @@ const ConfigForm = ({ onSaveConfig, onCancel, initialConfig }) => {
           onChange={handleChange}
         />
 
-        <h3>Campaign Level</h3>
-        <label htmlFor="objective">Objective:</label>
-        <select
-          id="objective"
-          name="objective"
-          value={config.objective}
-          onChange={handleChange}
-        >
-          <option value="OUTCOME_LEADS">Leads</option>
-          <option value="OUTCOME_SALES">Sales</option>
-          <option value="OUTCOME_ENGAGEMENT">Engagement</option>
-          <option value="OUTCOME_AWARENESS">Awareness</option>
-          <option value="OUTCOME_TRAFFIC">Traffic</option>
-          <option value="OUTCOME_APP_PROMOTION">App Promotion</option>
-        </select>
-
-        {showAppStoreUrl && (
-          <div>
-            <label htmlFor="object_store_url">App Store URL:</label>
-            <input
-              type="text"
-              id="object_store_url"
-              name="object_store_url"
-              value={config.object_store_url}
+        {isNewCampaign && (
+          <>
+            <h3>Campaign Level</h3>
+            <label htmlFor="objective">Objective:</label>
+            <select
+              id="objective"
+              name="objective"
+              value={config.objective}
               onChange={handleChange}
-              required={showAppStoreUrl}
+            >
+              <option value="OUTCOME_LEADS">Leads</option>
+              <option value="OUTCOME_SALES">Sales</option>
+              <option value="OUTCOME_ENGAGEMENT">Engagement</option>
+              <option value="OUTCOME_AWARENESS">Awareness</option>
+              <option value="OUTCOME_TRAFFIC">Traffic</option>
+              <option value="OUTCOME_APP_PROMOTION">App Promotion</option>
+            </select>
+
+            {showAppStoreUrl && (
+              <div>
+                <label htmlFor="object_store_url">App Store URL:</label>
+                <input
+                  type="text"
+                  id="object_store_url"
+                  name="object_store_url"
+                  value={config.object_store_url}
+                  onChange={handleChange}
+                  required={showAppStoreUrl}
+                />
+              </div>
+            )}
+
+            <label htmlFor="campaign_budget_optimization">Campaign Budget Optimization:</label>
+            <select
+              id="campaign_budget_optimization"
+              name="campaign_budget_optimization"
+              value={config.campaign_budget_optimization}
+              onChange={handleChange}
+            >
+              <option value="DAILY_BUDGET">Daily Budget</option>
+              <option value="LIFETIME_BUDGET">Lifetime Budget</option>
+              <option value="AD_SET_BUDGET_OPTIMIZATION">Ad Set Budget Optimization</option>
+            </select>
+
+            {config.campaign_budget_optimization !== 'AD_SET_BUDGET_OPTIMIZATION' && (
+              <div>
+                <label htmlFor="campaign_budget_value">Campaign Budget Value:</label>
+                <input
+                  type="number"
+                  id="campaign_budget_value"
+                  name="campaign_budget_value"
+                  value={config.campaign_budget_value}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+
+            {config.campaign_budget_optimization !== 'AD_SET_BUDGET_OPTIMIZATION' && (
+              <div>
+                <label htmlFor="campaign_bid_strategy">Campaign Bid Strategy:</label>
+                <select
+                  id="campaign_bid_strategy"
+                  name="campaign_bid_strategy"
+                  value={config.campaign_bid_strategy}
+                  onChange={handleChange}
+                >
+                  <option value="LOWEST_COST_WITHOUT_CAP">Lowest Cost</option>
+                  <option value="COST_CAP">Cost Cap</option>
+                  <option value="LOWEST_COST_WITH_BID_CAP">Bid Cap</option>
+                </select>
+              </div>
+            )}
+
+            <label htmlFor="buying_type">Buying Type:</label>
+            <select
+              id="buying_type"
+              name="buying_type"
+              value={config.buying_type}
+              onChange={handleChange}
+            >
+              <option value="AUCTION">Auction</option>
+              <option value="RESERVED">Reserved</option>
+            </select>
+          </>
+        )}
+
+        <h3>Ad Set Level</h3>
+
+        {config.campaign_budget_optimization === 'AD_SET_BUDGET_OPTIMIZATION' && (
+          <>
+            <label htmlFor="ad_set_budget_optimization">Ad Set Budget Optimization:</label>
+            <select
+              id="ad_set_budget_optimization"
+              name="ad_set_budget_optimization"
+              value={config.ad_set_budget_optimization}
+              onChange={handleChange}
+            >
+              <option value="DAILY_BUDGET">Daily Budget</option>
+              <option value="LIFETIME_BUDGET">Lifetime Budget</option>
+            </select>
+
+            <label htmlFor="ad_set_budget_value">Ad Set Budget Value:</label>
+            <input
+              type="number"
+              id="ad_set_budget_value"
+              name="ad_set_budget_value"
+              value={config.ad_set_budget_value}
+              onChange={handleChange}
+            />
+
+            {showPredictionId && (
+              <div>
+                <label htmlFor="prediction_id">Prediction ID:</label>
+                <input
+                  type="text"
+                  id="prediction_id"
+                  name="prediction_id"
+                  value={config.prediction_id}
+                  onChange={handleChange}
+                />
+              </div>
+            )}
+
+            {config.buying_type !== 'RESERVED' && (
+              <label htmlFor="ad_set_bid_strategy">Ad Set Bid Strategy:</label>
+            )}
+            {config.buying_type !== 'RESERVED' && (
+              <select
+                id="ad_set_bid_strategy"
+                name="ad_set_bid_strategy"
+                value={config.ad_set_bid_strategy}
+                onChange={handleChange}
+              >
+                <option value="LOWEST_COST_WITHOUT_CAP">Lowest Cost</option>
+                <option value="COST_CAP">Cost Cap</option>
+                <option value="LOWEST_COST_WITH_BID_CAP">Bid Cap</option>
+              </select>
+            )}
+          </>
+        )}
+
+        {showEndDate && (
+          <div>
+            <label htmlFor="ad_set_end_time">Ad Set End Time:</label>
+            <input
+              type="datetime-local"
+              id="ad_set_end_time"
+              name="ad_set_end_time"
+              value={config.ad_set_end_time}
+              onChange={handleChange}
             />
           </div>
         )}
 
-        <label htmlFor="campaign_budget_optimization">Campaign Budget Optimization:</label>
-        <select
-          id="campaign_budget_optimization"
-          name="campaign_budget_optimization"
-          value={config.campaign_budget_optimization}
-          onChange={handleChange}
-        >
-          <option value="DAILY_BUDGET">Daily Budget</option>
-          <option value="LIFETIME_BUDGET">Lifetime Budget</option>
-          <option value="AD_SET_BUDGET_OPTIMIZATION">Ad Set Budget Optimization</option>
-        </select>
+        {showBidAmount && (
+          <div>
+            <label htmlFor="bid_amount">Bid Amount:</label>
+            <input
+              type="number"
+              id="bid_amount"
+              name="bid_amount"
+              value={config.bid_amount}
+              onChange={handleChange}
+            />
+          </div>
+        )}
 
-        <label htmlFor="budget_value">Budget Value:</label>
-        <input
-          type="number"
-          id="budget_value"
-          name="budget_value"
-          value={config.budget_value}
-          onChange={handleChange}
-        />
-
-        <label htmlFor="bid_strategy">Bid Strategy:</label>
-        <select
-          id="bid_strategy"
-          name="bid_strategy"
-          value={config.bid_strategy}
-          onChange={handleChange}
-        >
-          <option value="LOWEST_COST_WITHOUT_CAP">Lowest Cost</option>
-          <option value="COST_CAP">Cost Cap</option>
-          <option value="LOWEST_COST_WITH_BID_CAP">Bid Cap</option>
-          <option value="LOWEST_COST_WITH_MIN_ROAS">Lowest Cost with Min ROAS</option>
-        </select>
-
-        <label htmlFor="buying_type">Buying Type:</label>
-        <select
-          id="buying_type"
-          name="buying_type"
-          value={config.buying_type}
-          onChange={handleChange}
-        >
-          <option value="AUCTION">Auction</option>
-          <option value="RESERVED">Reserved</option>
-        </select>
-
-        <h3>Ad Set Level</h3>
         <label htmlFor="location">Location:</label>
         <select
           id="location"
@@ -431,8 +585,8 @@ const ConfigForm = ({ onSaveConfig, onCancel, initialConfig }) => {
             value={config.age_range_min}
             onChange={handleChange}
           >
-            {[...Array(100).keys()].map(age => (
-              <option key={age + 1} value={age + 1}>{age + 1}</option>
+            {[...Array(48).keys()].map(age => (
+              <option key={age + 18} value={age + 18}>{age + 18}</option>
             ))}
           </select>
           <span className="age-range-separator">to</span>
@@ -442,11 +596,12 @@ const ConfigForm = ({ onSaveConfig, onCancel, initialConfig }) => {
             value={config.age_range_max}
             onChange={handleChange}
           >
-            {[...Array(100).keys()].map(age => (
-              <option key={age + 1} value={age + 1}>{age + 1}</option>
+            {[...Array(48).keys()].map(age => (
+              <option key={age + 18} value={age + 18}>{age + 18}</option>
             ))}
           </select>
         </div>
+
         <label htmlFor="gender">Gender:</label>
         <select
           id="gender"
@@ -468,6 +623,16 @@ const ConfigForm = ({ onSaveConfig, onCancel, initialConfig }) => {
         />
 
         <h3>Ad Level</h3>
+        <label htmlFor="ad_format">Ad Format:</label>
+        <select
+          id="ad_format"
+          name="ad_format"
+          value={config.ad_format}
+          onChange={handleChange}
+        >
+          <option value="Single image or video">Single image or video</option>
+          <option value="Carousel">Carousel</option>
+        </select>
         <label htmlFor="ad_creative_primary_text">Primary Text:</label>
         <textarea
           id="ad_creative_primary_text"
@@ -546,6 +711,7 @@ ConfigForm.propTypes = {
   onSaveConfig: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   initialConfig: PropTypes.object.isRequired,
+  isNewCampaign: PropTypes.bool.isRequired, // New prop to indicate if it's a new campaign
 };
 
 export default ConfigForm;

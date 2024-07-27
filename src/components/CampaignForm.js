@@ -15,7 +15,7 @@ const CampaignForm = ({ formId, onSubmit, onEditConfig, onGoBack }) => {
       formData.append('campaign_id', campaignId);
     }
 
-    onSubmit(formData);
+    onSubmit(formData, formId === 'newCampaign');
   };
 
   return (

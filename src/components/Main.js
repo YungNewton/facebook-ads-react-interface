@@ -7,6 +7,20 @@ import SuccessScreen from './SuccessScreen';
 
 const socket = io('http://localhost:5000/');
 
+const getDefaultStartTime = () => {
+  const startTime = new Date();
+  startTime.setUTCDate(startTime.getUTCDate() + 1);
+  startTime.setUTCHours(4, 0, 0, 0);
+  return startTime.toISOString().slice(0, 16); // Ensure it is in correct format for datetime-local input
+};
+
+const getDefaultEndTime = () => {
+  const endTime = new Date();
+  endTime.setUTCDate(endTime.getUTCDate() + 2); // Default end time 1 day after start time
+  endTime.setUTCHours(4, 0, 0, 0);
+  return endTime.toISOString().slice(0, 16); // Ensure it is in correct format for datetime-local input
+};
+
 const Main = () => {
   const [formId, setFormId] = useState('mainForm');
   const [previousForm, setPreviousForm] = useState('mainForm');
@@ -21,9 +35,9 @@ const Main = () => {
     app_secret: '88d92443cfcfc3922cdea79b384a116e',
     access_token: 'EAAEeNcueZAVYBO0NvEUMo378SikOh70zuWuWgimHhnE5Vk7ye8sZCaRtu9qQGWNDvlBZBBnZAT6HCuDlNc4OeOSsdSw5qmhhmtKvrWmDQ8ZCg7a1BZAM1NS69YmtBJWGlTwAmzUB6HuTmb3Vz2r6ig9Xz9ZADDDXauxFCry47Fgh51yS1JCeo295w2V',
     objective: 'OUTCOME_SALES',
-    campaign_budget_optimization: 'DAILY_BUDGET',
+    campaign_budget_optimization: 'AD_SET_BUDGET_OPTIMIZATION',
     budget_value: '50.73', // Default value in dollars
-    bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+    campaign_bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
     buying_type: 'AUCTION',
     object_store_url: '',
     location: 'GB',
@@ -36,7 +50,13 @@ const Main = () => {
     ad_creative_description: '',
     call_to_action: 'SHOP_NOW',
     destination_url: '',
-    url_parameters: ''
+    url_parameters: '',
+    ad_set_budget_value: '50.73', // Default ad set budget value in dollars
+    ad_format: 'Single image or video', // Default ad format
+    bid_amount: '5.0', // Default bid amount value
+    end_time: getDefaultEndTime(),
+    ad_set_bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+    prediction_id: '', // New field for prediction_id
   });
   const [taskId, setTaskId] = useState(null);
   const [uploadController, setUploadController] = useState(null);
@@ -137,14 +157,20 @@ const Main = () => {
     }
   };
 
-  const handleSubmit = (formData) => {
+  const handleSubmit = (formData, isNewCampaign) => {
     const taskId = `task-${Math.random().toString(36).substr(2, 9)}`;
     setTaskId(taskId);
     formData.append('task_id', taskId);
 
+    // Append all config values to formData
     Object.keys(config).forEach((key) => {
       formData.append(key, config[key]);
     });
+
+    // If buying_type is RESERVED, add prediction_id to formData
+    if (config.buying_type === 'RESERVED' && config.prediction_id) {
+      formData.append('prediction_id', config.prediction_id);
+    }
 
     const controller = new AbortController();
     setUploadController(controller);
@@ -202,7 +228,12 @@ const Main = () => {
         />
       )}
       {formId === 'configForm' && (
-        <ConfigForm initialConfig={config} onSaveConfig={handleSaveConfig} onCancel={handleCancelConfig} />
+        <ConfigForm
+          initialConfig={config}
+          onSaveConfig={handleSaveConfig}
+          onCancel={handleCancelConfig}
+          isNewCampaign={previousForm === 'newCampaignForm'}
+        />
       )}
       {formId === 'progress' && (
         <div className="progress-container">
@@ -215,13 +246,6 @@ const Main = () => {
       )}
     </div>
   );
-};
-
-const getDefaultStartTime = () => {
-  const startTime = new Date();
-  startTime.setUTCDate(startTime.getUTCDate() + 1);
-  startTime.setUTCHours(4, 0, 0, 0);
-  return startTime.toISOString().slice(0, 16); // Ensure it is in correct format for datetime-local input
 };
 
 export default Main;
