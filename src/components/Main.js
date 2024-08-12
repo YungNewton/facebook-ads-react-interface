@@ -57,6 +57,20 @@ const Main = () => {
     end_time: getDefaultEndTime(),
     ad_set_bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
     prediction_id: '', // New field for prediction_id
+    placement_type: 'advantage_plus',
+    platforms: {
+      facebook: true,
+      instagram: true,
+      audience_network: true,
+      messenger: true,
+    },
+    placements: {
+      feeds: true,
+      stories: true,
+      in_stream: true,
+      search: true,
+      apps_sites: true,
+    },
   });
   const [taskId, setTaskId] = useState(null);
   const [uploadController, setUploadController] = useState(null);
@@ -86,6 +100,7 @@ const Main = () => {
     socket.on('task_complete', (data) => {
       if (data.task_id === taskId) {
         clearInterval(logInterval);
+        console.log('Task complete:', data);
         setFormId('successScreen');
       }
     });
@@ -93,6 +108,7 @@ const Main = () => {
     socket.on('error', (data) => {
       if (data.task_id === taskId) {
         clearInterval(logInterval);
+        console.error('Error received:', data);
         alert(`Error: ${data.message}`);
         setFormId('mainForm');
       }
@@ -125,11 +141,13 @@ const Main = () => {
   };
 
   const handleSaveConfig = (newConfig) => {
+    console.log('Config saved:', newConfig);
     setConfig(newConfig);
     setFormId(previousForm);
   };
 
   const handleCancelConfig = () => {
+    console.log('Config edit canceled');
     setFormId(previousForm);
   };
 
@@ -137,6 +155,7 @@ const Main = () => {
     if (uploadController) {
       uploadController.abort();
       setUploadController(null);
+      console.log('Upload canceled by user');
     }
 
     if (taskId) {
@@ -151,6 +170,7 @@ const Main = () => {
           setFormId('mainForm');
         })
         .catch((error) => {
+          console.error('Error occurred while canceling the upload:', error);
           alert('An error occurred while canceling the upload');
           setFormId('mainForm');
         });
@@ -161,23 +181,30 @@ const Main = () => {
     const taskId = `task-${Math.random().toString(36).substr(2, 9)}`;
     setTaskId(taskId);
     formData.append('task_id', taskId);
-
-    // Append all config values to formData
+  
+    // Serialize and append all config values to formData
     Object.keys(config).forEach((key) => {
-      formData.append(key, config[key]);
+      if (typeof config[key] === 'object') {
+        formData.append(key, JSON.stringify(config[key]));
+        console.log(`Appending to formData: ${key} = ${JSON.stringify(config[key])}`);
+      } else {
+        formData.append(key, config[key]);
+        console.log(`Appending to formData: ${key} = ${config[key]}`);
+      }
     });
-
+  
     // If buying_type is RESERVED, add prediction_id to formData
     if (config.buying_type === 'RESERVED' && config.prediction_id) {
       formData.append('prediction_id', config.prediction_id);
+      console.log(`Appending prediction_id to formData: ${config.prediction_id}`);
     }
-
+  
     const controller = new AbortController();
     setUploadController(controller);
-
+  
     setProgress(0);
     setStepVisible(false);
-
+  
     fetch('http://localhost:5000/create_campaign', {
       method: 'POST',
       body: formData,
@@ -185,7 +212,9 @@ const Main = () => {
     })
       .then((response) => response.json())
       .then((data) => {
+        console.log('Response from server:', data);
         if (data.error) {
+          console.error('Error response:', data.error);
           alert(data.error);
           setFormId('mainForm');
         }
@@ -194,13 +223,14 @@ const Main = () => {
         if (error.name === 'AbortError') {
           console.log('Upload canceled by user');
         } else {
+          console.error('Error during campaign creation:', error);
           alert('An error occurred while creating the campaign');
         }
         setFormId('mainForm');
       });
-
+  
     handleShowForm('progress');
-  };
+  };  
 
   return (
     <div className="container">

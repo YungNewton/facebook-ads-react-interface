@@ -75,3 +75,23 @@
     font-size: 0.9em;
   }
   
+  .manual-options {
+    display: flex;
+    flex-direction: column;
+}
+
+.manual-options .option-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.manual-options input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.manual-options h4 {
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
