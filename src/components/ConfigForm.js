@@ -54,7 +54,7 @@ const ConfigForm = ({ onSaveConfig, onCancel, initialConfig, isNewCampaign }) =>
       stories: false,
       in_stream: false,
       search: false,
-      messages: false,
+      messages: false, // Added the Messages placement option
       apps_sites: false,
     }
   });
@@ -536,6 +536,16 @@ const ConfigForm = ({ onSaveConfig, onCancel, initialConfig, isNewCampaign }) =>
                 />
               }
               label="Search results"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={config.placements.messages}
+                  onChange={handlePlacementChange}
+                  name="messages"
+                />
+              }
+              label="Messages"
             />
             <FormControlLabel
               control={
